@@ -1,0 +1,228 @@
+\section{Materials and methods}\label{methodology}
+This section describes the methodology applied to generate the results presented in this paper. We focus here on outlining the most prominent features of the applied modeling framework and refer to previous studies that provide more detailed descriptions of the model components. Generally, the modeling framework consists of two model types\footnote{We use the term model type here because, as will be described later, we combine two existing models to optimize district heating at the local level. Consequently, that model type (subsequently referred to as the first type) encompasses two models.} derived from their spatial scope. We start by describing the first type used for the optimal infrastructure planning of district heating at the local level (Section \ref{Type1}). Afterwards, we briefly describe the large-scale energy system model EMPIRE, the second type, as it is a model for the European energy system and thus aggregated level (Section \ref{Type2}). The two model types are linked in this modeling framework by introducing values of the cost-optimal solution as a restriction (more precisely as parameters) in the first model type. Subsequently, details about how the large-scale energy system model constrains the optimization at the local level are provided (Section \ref{Linkage}). Details of the case study (incl., the scenario description) are given in Section \ref{Data}. 
+
+\subsection{District heating planning at the local level}\label{Type1}
+In this work, we use a multi-nodal unit commitment (UC) model and build upon the two optimization models described in \cite{zwickl2022demystifying} and \cite{zwickl2022decommissioning}. In the paper here, the optimization model is formulated as a linear program as considering additional linear constraints allows us to replace binary decision variables present in most multi-nodal UC models when representing the grid in detail. The model is implemented in Python 3.8.12 using the modeling framework Pyomo version 5.7.3 \cite{hart2017optimization}. It is solved with Gurobi version 9.0.3. We use the standard data format template the Integrated Assessment Modeling Consortium developed using the open-source Python package pyam \cite{huppmann2021pyam}. Required material to run the model and replicate present results are on GitHub \cite{zwickl}. The objective function is to minimize the total systems costs of the district heating network operator. The key results encompass the optimal investment decision into heat generation technologies and transport pipelines, represented by the value of installed capacity $Cap^{ins}_{i, t}$ per heat infrastructure $i$ (i.e., heat technology and heat transport pipeline) and time step $t$ in the optimal case:
+
+\begin{align}\label{objective}
+	Cap^{*}_{i, t} = \underset{Cap^{ins}_{i, t}}{\mathrm{argmin}}~z
+\end{align}
+
+Total system cost $z$ is the sum of investment, operation, and maintenance costs reduced by the revenues for delivering heat for the planning period. The operation costs include fuel costs and carbon emission costs. The carbon emission price is a parameter and exogenously fixed (see Section \ref{Linkage} for details). In general, the optimization is subject to a number of constraints. For instance, there is a demand constraint for each node within the network. Unlike to most energy system models, however, this is not a balance equation. Contrary, the demand, which is an exogenous parameter, can but not necessarily has to be met completely. So, the demand parameter is the upper bound of the heat that is delivered by district heating. The remaining heat demand (i.e., not delivered by district heating because the revenue stream does not justify the investment in heat generation and transport capacities from an economic viewpoint) is assumed to be met by other heat supply alternatives such as (mainly) direct electric heating. Thus, handling extant heat demand is an endogenous optimization decision. Whether and how much demand is delivered (by district heating) depends on the related revenue stream. Said revenue stream $r_{del}$ is described by Equation \ref{revenuestream}, where $q_{DH}$ is the actual quantity and $p_{DH}$ the price of district heating. 
+
+\begin{align}\label{revenuestream}
+	r_{del} = q_{dh} \times p_{dh} 
+\end{align}
+
+Regarding the $p_{DH}$, the price of district heating, two points are important here:
+
+\begin{itemize}
+	\item Firstly, $p_{DH}$ is the price that the customers pay for receiving/consuming district heating
+	\item And secondly, the price of district heating is determined by the electricity price. This reflects the fact that district heating has to be competitive against direct electric heating in Norway. See, for instance, the district heating price in the extant district heating network in the Norwegian capital city Oslo \cite{sintef2015}. 
+\end{itemize}
+
+Regarding the assumptions for the heat demand, we build upon open-source data from the \textit{hotmaps} project (\url{https://www.hotmaps.eu/map}). We use values at the hectare level and cluster them based on representative heat demand clusters. On the one hand, it allows us to reduce the data size for the optimization problem (i.e., number of nodes) and still respects the different densities of heat demand. We use the practical approach of the \textit{K-means} algorithm to calculate clusters of heat demand and densities.\footnote{The clustering algorithm presented by Boeing in \cite{boeing2018clustering} could add value for analyses that primarily address the urban planning of district heating networks. This algorithm additionally considers an existing road network (and thus potential routes of district heating pipelines) when calculating optimal clusters. However, as our focus here is on the techno-economic analysis of district heating, the neglect of details about the street network is justified.} \vspace{0.5cm}
+
+The optimal decision of the heat generation capacity and quantity of heat sources used are limited to the optimal values from the large-scale energy system model EMPIRE optimizing the European energy system. Said limit for the optimal planning of district heating at the local level is displayed in a generic form in Equation \ref{limit}. $x_{dh}$ represents the optimal decision of both heat generation capacities and the quantity used per heat source. 
+
+\begin{align}\label{limit}
+	x_{dh} \leq \alpha_{lsesm}
+\end{align}
+
+$\alpha_{lsesm}$ is the value of the cost-optimal solution of the large-scale energy system model EMPIRE. Ultimately, only the decision on the network transport capacity is not restricted. In general, we consider several heat generation technologies (see Section \ref{Linkage}), but this is described in detail later when we elaborate on the linkage between the European decarbonization of the energy system and the local district heating planning. Before the following section briefly presents the large-scale energy system model EMPIRE.
+
+\subsection{\textcolor{magenta}{The large-scale energy system model EMPIRE}}\label{Type2}
+\begin{itemize}
+	\item \textcolor{magenta}{Short qualitative description of the model}
+	\item \textcolor{magenta}{Focus on the decarbonization of the European energy system}
+\end{itemize}
+
+\subsection{Linking local district heating planning and the EMPIRE model}\label{Linkage}
+The following EMPIRE model results used for constraining local district heating planning (i.e., the linkage) are presented in the 2022 published paper \cite{backe2022impact}. Moreover, the paper gives a detailed description of the applied methodology. We thus refer for background information to said literature. Table \ref{tab:prices} shows the prices for electricity and carbon emissions between 2025 and 2060 for four different seasons (spring, summer, fall, and winter) and the five different Norwegian electricity price zones (NO1 to NO5). Note that there is a single European carbon price per period only. Table \ref{tab:InstalledCap} and \ref{tab:QuantityGen} shows the installed capacity and heat production per technology and period respectively. The term CHP (combined heat and power) indicates that a generation technology generates both electricity and heat. The ration between electricity and heat production is fixed (see Table \ref{tab:CopRatio}). HOP is heat only production. Heat generation technologies \textcolor{magenta}{A, B and C} are generally considered but not present in the cost-optimal EMPIRE solution. We address this in detail in the sensitivity analysis in Section \ref{res:sensitivity}. Assumptions regarding the technical lifetime of heat generation technologies are in Table \ref{tab:Lifetime}.
+
+\begin{table}[h]
+	\centering
+	\setlength{\extrarowheight}{.5em}
+	\scalebox{0.9}{
+		\begin{tabular}{llrrrrrr}
+			\toprule
+			\multicolumn{2}{c}{Time} & \multicolumn{5}{c}{Electricity price ($p_{dh}$) in \SI{}{EUR \per MWh}} & CO\textsubscript{2} price in \SI{}{EUR \per tCO\textsubscript{2}}\\\hline
+			Period & Season& NO1 & NO2 & NO3 & NO4 & NO5 & NO1 to NO5\\\hline
+			
+			2020-25 & Spring & 44.1 & 42.8  & 45.9 & 43.4 & 42.9 & 24.0\\
+			2020-25 & Summer & 45.6 & 44.9  & 45.3 & 44.0 & 44.5 & 24.0\\
+			2020-25 & Fall & 50.6 & 47.0  & 48.2 & 42.8 & 48.3 & 24.0\\
+			2020-25 & Winter & 63.4 & 41.9  & 51.2 & 41.7 & 43.1 & 24.0\\\hline
+			
+			2025-30 & Spring & 67.2 & 65.0  & 69.6 & 63.5 & 64.9 & 32.3\\
+			2025-30 & Summer & 63.5 & 63.5  & 64.8 & 53.6 & 61.9 & 32.3\\
+			2025-30 & Fall & 71.1 & 68.5  & 70.0 & 61.9 & 60.3 & 32.3\\
+			2025-30 & Winter & 76.5 & 64.4  & 70.4 & 60.5 & 58.0 & 32.3\\\hline
+			
+			2030-35 & Spring & 64.0 & 41.1  & 49.5 & 48.2 & 45.6 & 16.5\\
+			2030-35 & Summer & 45.3 & 45.9  & 46.0 & 45.3 & 43.8 & 16.5\\
+			2030-35 & Fall & 64.1 & 62.4  & 66.5 & 55.0 & 59.4 & 16.5\\
+			2030-35 & Winter & 41.5 & 39.2  & 26.1 & 23.4 & 29.6 & 16.5\\\hline
+			
+			2035-40 & Spring & 74.4 & 59.4  & 73.9 & 72.5 & 63.2 & 119.5\\
+			2035-40 & Summer & 90.4 & 92.1  & 93.5 & 89.0 & 86.5 & 119.5\\
+			2035-40 & Fall & 74.3 & 65.5  & 100.5 & 40.8 & 56.5 & 119.5\\
+			2035-40 & Winter & 96.6 & 63.9  & 45.0 & 55.7 & 57.6 & 119.5\\\hline
+			
+			2040-45 & Spring & 46.3 & 26.6  & 70.8 & 46.2 & 41.4 & 480.6\\
+			2040-45 & Summer & 25.1 & 23.0  & 31.3 & 21.9 & 15.0 & 480.6\\
+			2040-45 & Fall & 51.7 & 32.6  & 29.1 & 29.3 & 22.1 & 480.6\\
+			2040-45 & Winter & 148.6 & 69.2  & 69.5 & 59.0 & 69.7 & 480.6\\\hline
+			
+			2045-50 & Spring & 50.1 & 29.4  & 61.8 & 38.6 & 26.0 & 417.2\\
+			2045-50 & Summer & 41.9 & 34.4  & 35.4 & 22.9 & 32.0 & 417.2\\
+			2045-50 & Fall & 68.7 & 43.4  & 61.4 & 26.5 & 32.8 & 417.2\\
+			2045-50 & Winter & 167.7 & 102.9  & 70.5 & 51.3 & 85.0 & 417.2\\\hline
+			
+			2050-55 & Spring & 19.5 & 7.7  & 15.9 & 17.1 & 8.3 & 663.7\\
+			2050-55 & Summer & 20.1 & 13.2  & 18.2 & 13.9 & 17.1 & 663.7\\
+			2050-55 & Fall & 141.6 & 76.8  & 132.9 & 128.3 & 82.9 & 663.7\\
+			2050-55 & Winter & 129.1 & 78.7  & 59.8 & 51.6 & 80.7 & 663.7\\\hline
+			
+			2055-60 & Spring & 50.8 & 35.1  & 43.5 & 27.4 & 42.9 & 478.5\\
+			2055-60 & Summer & 31.9 & 27.6  & 37.0 & 25.9 & 21.5 & 478.5\\
+			2055-60 & Fall & 48.9 & 36.2  & 46.6 & 29.8 & 34.7 & 478.5\\
+			2055-60 & Winter & 145.8 & 66.5  & 116.8 & 117.4 & 69.3 & 478.5\\
+
+			\bottomrule
+	\end{tabular}}
+	\caption{Electricity and carbon prices in the five different Norwegian electricity price zones until 2060. Values generated by the cost-optimal solution of the large-scale energy system model EMPIRE.}
+	\label{tab:prices}
+\end{table}
+
+\begin{table}[h]
+	\centering
+	\setlength{\extrarowheight}{.5em}
+	\scalebox{0.9}{
+		\begin{tabular}{llrrrrrrrr}
+			\toprule
+			& & \multicolumn{8}{c}{Installed capacity per technology and period ($\alpha_{lsesm}$) in \SI{}{MW}}\\\hline
+			Technology & Node & 20-25& 25-30 & 30-35 & 35-40 & 40-45 & 45-50 & 50-55 & 55-60\\\hline
+			
+			\multirow{5}{*}{Waste (CHP)} & NO1 & 307.7 & 307.7 & 307.7 & 307.7 & 307.7 & 0.2 & 0.2 & 0.2\\
+			& NO2 & 307.6 & 307.6 & 307.6 & 307.6 & 307.6 & 0.1 & 0.2 & 0.2\\
+			& NO3 & 227.9 & 227.9 & 227.9 & 227.9 & 227.9 & 0.2 & 0.2 & 0.2\\
+			& NO4 & 159.3 & 159.5 & 159.5 & 159.5 & 159.5 & 0.2 & 0.2 & 0.2\\
+			& NO5 & 97.7 & 97.7 & 97.7 & 97.7 & 97.7 & 0.1 & 0.2 & 0.2\\\hline
+			
+			\multirow{5}{*}{Waste (HOP)} & NO1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1\\
+			& NO2 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1\\
+			& NO3 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1\\
+			& NO4 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1\\
+			& NO5 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1 & 0.1\\\hline
+			
+			\multirow{5}{*}{Wood (CHP)} & NO1 & 927.1 & 1381.7 & 1730.9 & 3497.6 & 4372.8 & 4087.8 & 4231.2 & 3882.0\\
+			& NO2 & 0.2 & 0.2 & 2.3 & 5.2 & 15.5 & 1286.6 & 1286.6 & 1284.5\\
+			& NO3 & 177.4 & 219.2 & 514.9 & 838.3 & 893.6 & 805.3 & 763.5 & 1125.0\\
+			& NO4 & 0.2 & 137.9 & 137.9 & 306.4 & 306.4 & 306.4 & 243.1 & 745.6\\
+			& NO5 & 0.2 & 0.2 & 0.4 & 1.1 & 1.1 & 165.0 & 165.0 & 164.8\\\hline
+			
+			\multirow{5}{*}{Wood (HOP)} & NO1 & 0.2 & 0.2 & 0.2 & 0.2 & 0.2 & 0.4 & 0.6 & 0.5\\
+			& NO2 & 0.1 & 0.1 & 0.3 & 0.3 & 0.5 & 0.5 & 0.6 & 0.5\\
+			& NO3 & 0.2 & 0.2 & 0.2 & 0.2 & 0.5 & 0.5 & 0.5 & 0.7\\
+			& NO4 & 0.1 & 0.2 & 0.2 & 0.3 & 0.3 & 0.3 & 0.6 & 0.6\\
+			& NO5 & 0.2 & 0.2 & 0.2 & 0.2 & 0.3 & 0.4 & 0.5 & 0.6\\\hline
+			
+			\multirow{5}{*}{Heat Pump (Air)} & NO1 & 983.3 & 900.8 & 1047.2 & 372.3 & 760.5 & 1112.2 & 1507.8 & 1119.6\\
+			& NO2 & 681.1 & 613.8 & 1132.0 & 894.1 & 1319.3 & 1033.4 & 1180.2 & 1163.0\\
+			& NO3 & 317.0 & 270.5 & 334.2 & 118.8 & 510.0 & 600.0 & 756.1 & 538.6\\
+			& NO4 & 138.6 & 168.5 & 161.9 & 122.0 & 186.3 & 209.1 & 388.0 & 260.1\\
+			& NO5 & 386.2 & 356.4 & 438.8 & 395.0 & 620.8 & 541.8 & 670.6 & 505.9\\		
+			
+			\bottomrule
+	\end{tabular}}
+	\caption{Installed capacity per heat genertion technology and period. Values generated by the cost-optimal solution of the large-scale energy system model EMPIRE.}
+	\label{tab:InstalledCap}
+\end{table}
+
+\begin{table}[h]
+	\centering
+	\setlength{\extrarowheight}{.5em}
+	\scalebox{0.9}{
+		\begin{tabular}{llrrrrrrrr}
+			\toprule
+			& & \multicolumn{8}{c}{Annual heat production per technology and period ($\alpha_{lsesm}$) in \SI{}{GWh}}\\\hline
+			Technology & Node & 20-25& 25-30 & 30-35 & 35-40 & 40-45 & 45-50 & 50-55 & 55-60\\\hline
+			
+			\multirow{5}{*}{Waste (CHP)} & NO1 & 2560.5 & 2560.5 & 2277.0 & 1939.5 & 605.1 & 0.5 & 0.6 & 0.5\\
+			& NO2 & 2547.3 & 2547.9 & 2221.6 & 1756.3 & 302.4 & 0.3 & 0.5 & 0.4\\
+			& NO3 & 1768.9 & 1861.9 & 1528.3 & 1073.0 & 369.6 & 0.5 & 0.5 & 0.4\\
+			& NO4 & 1186.1 & 1224.8 & 1097.5 & 807.5 & 286.3 & 0.5 & 0.5 & 0.4\\
+			& NO5 & 809.3 & 809.8 & 687.2 & 487.3 & 134.8 & 0.3 & 0.5 & 0.5\\\hline
+			
+			\multirow{5}{*}{Waste (HOP)} & NO1 & 0.2 & 0.3 & 0.3 & 0.2 & 0.2 & 0.3 & 0.4 & 0.4\\
+			& NO2 & 0.2 & 0.2 & 0.3 & 0.3 & 0.2 & 0.3 & 0.4 & 0.4\\
+			& NO3 & 0.2 & 0.2 & 0.3 & 0.3 & 0.2 & 0.3 & 0.4 & 0.4\\
+			& NO4 & 0.2 & 0.2 & 0.3 & 0.3 & 0.2 & 0.3 & 0.4 & 0.4\\
+			& NO5 & 0.2 & 0.2 & 0.3 & 0.3 & 0.2 & 0.3 & 0.4 & 0.4\\\hline
+			
+			\multirow{5}{*}{Wood (CHP)} & NO1 & 927.1 & 1381.7 & 1730.9 & 3497.6 & 4372.8 & 4087.8 & 4231.2 & 3882.0\\
+			& NO2 & 0.2 & 0.2 & 2.3 & 5.2 & 15.5 & 1286.6 & 1286.6 & 1284.5\\
+			& NO3 & 177.4 & 219.2 & 514.9 & 838.3 & 893.6 & 805.3 & 763.5 & 1125.0\\
+			& NO4 & 0.2 & 137.9 & 137.9 & 306.4 & 306.4 & 306.4 & 243.1 & 745.6\\
+			& NO5 & 0.2 & 0.2 & 0.4 & 1.1 & 1.1 & 165.0 & 165.0 & 164.8\\\hline
+			
+			\multirow{5}{*}{Wood (HOP)} & NO1 & 0.2 & 0.2 & 0.2 & 0.2 & 0.2 & 0.2 & 0.3 & 0.4\\
+			& NO2 & 0.1 & 0.2 & 0.2 & 0.2 & 0.2 & 0.3 & 0.2 & 0.2\\
+			& NO3 & 0.1 & 0.2 & 0.2 & 0.2 & 0.2 & 0.4 & 0.2 & 0.4\\
+			& NO4 & 0.1 & 0.2 & 0.1 & 0.3 & 0.2 & 0.3 & 0.2 & 0.4\\
+			& NO5 & 0.1 & 0.1 & 0.1 & 0.2 & 0.2 & 0.3 & 0.2 & 0.3\\\hline
+			
+			\multirow{5}{*}{Heat Pump (air)} & NO1 & 10630.4 & 8671.8 & 11885.1 & 4120.8 & 7899.8 & 8216.3 & 8478.1 & 9092.1\\
+			& NO2 & 6564.4 & 6632.9 & 7049.1 & 7410.2 & 8971.0 & 7675.9 & 7789.6 & 8055.9\\
+			& NO3 & 3057.7 & 2579.3 & 3342.0 & 1512.4 & 3436.1 & 4127.6 & 4399.8 & 3874.4\\
+			& NO4 & 1995.9 & 1714.2 & 2162.9 & 1743.4 & 2524.8 & 2992.5 & 3121.8 & 2627.5\\
+			& NO5 & 3433.6 & 3433.3 & 3561.8 & 3742.8 & 4119.4 & 3996.4 & 3917.6 & 4001.9\\		
+			
+			\bottomrule
+	\end{tabular}}
+	\caption{Annual (expected) heat production per heat generation technology and period. Values generated by the cost-optimal solution of the large-scale energy system model EMPIRE.}
+	\label{tab:QuantityGen}
+\end{table}
+
+
+\subsection{Case study and scenario description}\label{Data}
+We apply the model to investigate district heating networks in the five Norwegian electricity price zones. It allows us to focus on geographical differences in the heat supply task and the trade-offs between purely electricity-based heat supply and district heating. Table \ref{tab:CityDescription} gives an overview of the selected district heating networks and supply areas (one each per electricity price zone). As said, the Norwegian case study is fascinating because Norway, compared to the other Scandinavian or Nordic countries, currently has the lowest share of district heating. We refer again to the study by Sandberg et al. \cite{sandberg2018framework} published in 2018 and already mentioned in the literature survey who have elaborated on this topic in detail. Their key findings can be summarized as the future of district heating in Nordic countries significantly depend on carbon and electricity prices and existing district heating infrastructure. With this in mind, the heat supply areas studied in this paper provide a meaningful mix of different characteristics. \textcolor{magenta}{For instance, ...add description of the different cities / supply areas.} 
+
+
+\begin{table}[h]
+	\centering
+	\setlength{\extrarowheight}{.5em}
+	\scalebox{0.9}{
+		\begin{tabular}{cccccc}
+			\toprule
+			
+			Node & City & Area in \SI{}{km^2} & Population & Annual heat demand in \SI{}{GWh} & Extant DH network\\\hline
+			
+			NO1 & Oslo & x & y & z & Yes\\
+			NO2 & w & x & y & z & Yes\\
+			NO3 & w & x & y & z & Yes\\
+			NO4 & w & x & y & z & Yes\\
+			NO5 & w & x & y & z & Yes\\
+			
+			\bottomrule
+	\end{tabular}}
+	\caption{Description of the five heat supply areas in the Norwegian price zones NO1 to NO5}
+	\label{tab:CityDescription}
+\end{table}
+
+\textcolor{magenta}{Short description of the Societal Commitment scenario}
+%\subsubsection{Scenarios}\label{sec:scenarios}
+%Four different quantitative scenarios are studied with the tailor-made model presented above. Input settings of three of them have been developed in the Horizon $2020$ research project openENTRANCE (\url{https://openentrance.eu/}) and describe a future European energy system development assuming to achieve the \SI{1.5}{\degreeCelsius} or \SI{2.0}{\degreeCelsius} climate target. These three scenarios are called \textit{Directed Transition} (DT), \textit{Societal Commitment} (SC), and \textit{Gradual Development} (GD) scenario\footnote{The openENTRANCE scenario \textit{Techno-Friendly} is not part of this work.}. The first two scenarios consider the remaining CO\textsubscript{2} budget of the \SI{1.5}{\degreeCelsius} climate target. Below, we briefly summarize the three openENTRANCE scenarios used in this work and refer to a detailed description to the studies in \cite{auer2020development} and \cite{auer2020quantitative}. For the reader with a particular interest in the openENTRANCE scenarios, we refer to the work in \cite{auer2019quantitative} in which the underlying storylines outlining the narrative frames of the quantitative scenarios can be found. \added{Note that the scenarios are used to set an empirical framework at the aggregate level for this work’s analysis, which is carried out ultimately at the local level. Against this background, European decarbonization scenarios are projected to the building level, making them accessible in practical applications.}\vspace{0.5cm}
+%
+
+%The SC scenario also leads to limiting the global temperature increase to \SI{1.5}{\degreeCelsius}. In contrast to the previous scenario, decentralization of the energy system and active participation as well as societal acceptance of energy transition pushes sustainable development. In addition, currently existing clean technologies are significantly supported by policy incentives to foster its accelerated rollout. Thus, the SC scenario assumes deep decarbonization of the energy system without fundamental breakthroughs of novel technologies. Therefore, the multi-apartment building implements an air-sourced heat pump as a sustainable heating system alternative. A CO\text{2} price increase from \SI{62}{EUR \per tCO_{2}} (in 2025) to \SI{497}{EUR \per tCO_{2}} (in 2040) achieves deep decarbonization of the European electricity and heating sector in the SC scenario by $2040$.\vspace{0.5cm}
+
+
+
+
+
+
+
+
+
