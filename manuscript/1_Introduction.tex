@@ -7,18 +7,4 @@ In the short term, LNG is essential for the supply security of Europe's energy s
 
 Against this background, the core objective of this work is to investigate the global LNG market equilibrium until 2040. Thereby, exchanged LNG quantities between the most relevant import and export countries to meet expected demands and resulting regional LNG prices are in the foreground of the analysis. We focus on the European market and its most relevant export countries to cover Europe's demand until 2040. The analysis furthermore allows estimating future LNG price developments until 2040. Latter is not only a main novelty of the present work but can also be seen as a relevant contribution to the literature. LNG prices are often needed for modeling energy systems and are, in those predominantly, an exogenous input parameter. The present values for LNG price trends, especially for those in Europe that consider the absence of Russian pipeline gas, may therefore be of great importance for future work of the scientific community analyzing the trajectory of the European energy system toward carbon neutrality.\vspace{0.35cm}    
 
-The method applied 
-
-
-
-
-%1.3 Applied methods
-%The linear optimization model is implemented in Python, using the optimization modeling language
-%Pyomo. For the data manipulation and analysis the Python package pandas is used. The objective
-%function minimizes the overall LNG import costs, while fulfilling the LNG demand of all importers.
-%As a result of the optimization, the optimal distribution of LNG flows from a set of exporters to a
-%set of importers is determined and then used to calculate the prices at each importer.
-%As input parameters, model uses monthly or yearly LNG import volumes, LNG export capacities
-%and LNG break-even prices. Additionally, geographical, technical and economic data necessary for
-%calculating the LNG transportation costs are used as input too.
-%Finally, the model is solved with the open-source optimizer GLPK.
+The method applied is the development of a linear optimization model. The objective function is to minimize the total LNG import costs (i.e., the sum of all import countries) while fulfilling all importer's exogenously predefined LNG demands. Import and export countries are represented by nodes in the model. Optimality of the model finds, among others, optimal LNG flows from each export to each import country. Input parameters encompass LNG import volumes (i.e., demands) with a monthly or yearly resolution, LNG export capacities, and LNG break-even prices. Additionally, spatial and further techno-economic data is used to calculate LNG transportation between each export and each import country. The data is available under a Zenodo license. The optimization model is implemented in Python, solved with Gurobi, and available on GitHub. 
