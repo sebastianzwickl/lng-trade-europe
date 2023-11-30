@@ -1,1 +1,1 @@
-# From the Role of Europe in the global LNG Market <br /> until 2040 
+# Modeling Europe's role in the global LNG market 2040: balancing decarbonization goals, energy security, and geopolitical tensions
