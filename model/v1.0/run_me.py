@@ -204,23 +204,98 @@ model.con_ccs_technology_utilization = py.Constraint(
 )
 
 
+# COST OF THE MARKET CLEARING
 model.var_cost_market_clearing = py.Var(
-    within=py.NonNegativeReals, doc="Variable: Cost of the market clearing in $."
+    within=py.NonNegativeReals,
+    doc="Variable: Cost of the market clearing per importer in $.",
 )
 
+
+def cost_of_market_clearing(m):
+    return m.var_cost_market_clearing == sum(
+        m.var_q[e, i] * m.par_des[e, i] for e in m.set_exporter for i in m.set_importer
+    )
+
+
+model.con_cost_of_market_clearing = py.Constraint(
+    rule=cost_of_market_clearing,
+    doc="Constraint: Cost of the market clearing (quantity times delivered ex-ship price) in $.",
+)
+
+
+# COST OF THE EUROPEAN DOMESTIC NATURAL GAS PRODUCTION
 model.var_cost_edp = py.Var(
     within=py.NonNegativeReals,
     doc="Variable: Cost of the European domestic production in $.",
 )
 
-model.var_cost_ccs_importer = py.Var(
-    model.set_importer_europe,
+
+def cost_of_domestic_european_production(m):
+    return m.var_cost_edp == sum(
+        m.var_q_dom_europe[country] * m.par_EDP_cost
+        for country in m.set_importer_europe
+    )
+
+
+model.con_cost_of_domestic_european_production = py.Constraint(
+    rule=cost_of_domestic_european_production,
+    doc="Constraint: Cost of the European domestic natural gas production in $.",
+)
+
+
+# COST OF CARBON CAPTURE AND STORAGE IN EUROPE
+model.var_cost_ccs = py.Var(
     within=py.NonNegativeReals,
     doc="Variable: Cost of carbon capture and storage in Europe in $.",
 )
 
+
+def cost_of_carbon_capture_storage(m):
+    return m.var_cost_ccs == sum(
+        m.var_q_dom_europe[country] * m.par_CCS_cost
+        for country in m.set_importer_europe
+    )
+
+
+model.con_cost_of_carbon_capture_storage = py.Constraint(
+    rule=cost_of_carbon_capture_storage,
+    doc="Constraint: Cost of capture capture & storage in Europe due to European domestic natural gas production in $.",
+)
+
+# COST OF LNG DEMAND NOT SUPPLIED
 model.var_cost_not_supply = py.Var(
-    model.set_importer,
     within=py.NonNegativeReals,
     doc="Variable: Cost of not supplying LNG demand in $",
 )
+
+
+def cost_of_demand_not_covered(m):
+    return m.var_cost_not_supply == sum(
+        m.var_demand_not_covered[importer] for importer in m.set_importer
+    )
+
+
+model.con_cost_of_demand_not_covered = py.Constraint(
+    rule=cost_of_demand_not_covered,
+    doc="Constraint: Cost of LNG demand not covered in $.",
+)
+
+
+# OBJECTIVE FUNCTION
+def objective_function(m):
+    return (
+        m.var_cost_market_clearing
+        + m.var_cost_edp
+        + m.var_cost_ccs
+        + m.var_cost_not_supply
+    )
+
+
+model.objective = py.Objective(expr=objective_function, sense=py.minimize)
+
+
+solver = py.SolverFactory("gurobi")
+solution = solver.solve(model)
+
+_formatted_number = "{:,}".format(int(model.objective()))
+print("Objective function value: %s $" % _formatted_number)
