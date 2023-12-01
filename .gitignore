@@ -144,5 +144,6 @@ dmypy.json
 
 # exclude reference folder
 materials/*
+model/outdated/*
 
 
