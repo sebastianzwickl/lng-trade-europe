@@ -1,6 +1,13 @@
 import utils
 import numpy as np
 import pyomo.environ as py
+from datetime import datetime
+import os
+import save_results_to_iamc_files as report
+
+# TODO: IMPORT AND EXPORT EMBARGOS INTROUDCING
+#       (2D) var_cost_market_clearing
+#       Shadow prices of importers
 
 
 INPUT_DATA = [
@@ -45,6 +52,7 @@ _importers_europe = ["France", "Other Europe", "Spain", "Belgium", "UK", "Italy"
 
 model = py.ConcreteModel()
 model.scenario = _SCENARIO
+model.year = 2040
 model.set_exporter = py.Set(initialize=exporters)
 model.set_importer = py.Set(initialize=importers)
 model.set_importer_europe = py.Set(initialize=_importers_europe)
@@ -100,7 +108,7 @@ print("CCS cost in $/MMBtu: ", model.par_CCS_cost())
 # source: https://ceenergynews.com/voices/the-myth-and-reality-behind-high-european-energy-prices/
 # Russian piped gas: 0.7463 $/MMBtu
 
-_production_cost = 1  # $/MMBtu
+_production_cost = 1.5  # $/MMBtu
 _value = np.around((1 + INFLATION) ** (TARGET_YEAR - 2019) * _production_cost, 2)
 
 model.par_EDP_cost = py.Param(
@@ -271,7 +279,7 @@ model.var_cost_not_supply = py.Var(
 
 def cost_of_demand_not_covered(m):
     return m.var_cost_not_supply == sum(
-        m.var_demand_not_covered[importer] for importer in m.set_importer
+        m.var_demand_not_covered[importer] * 10e10 for importer in m.set_importer
     )
 
 
@@ -299,3 +307,12 @@ solution = solver.solve(model)
 
 _formatted_number = "{:,}".format(int(model.objective()))
 print("Objective function value: %s $" % _formatted_number)
+
+
+# REPORT THE MODEL RESULTS TO OUTPUT FILES
+_now = datetime.now().strftime("%Y%m%d_%H%M")
+result_dir = os.path.join("result", "{}_{}".format(_now, model.scenario))
+if not os.path.exists(result_dir):
+    os.makedirs(result_dir)
+
+report.write_results_to_ext_iamc_format(model, result_dir)
