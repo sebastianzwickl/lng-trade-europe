@@ -87,7 +87,7 @@ def write_results_to_ext_iamc_format(m, res_dir):
     )
 
     input_iamc.to_excel(
-            os.path.join(res_dir, "0_inputs.xlsx"), index=False
+            os.path.join(res_dir, "inputs.xlsx"), index=False
         )
 
     """
@@ -95,7 +95,6 @@ def write_results_to_ext_iamc_format(m, res_dir):
             (2A) var_q
             (2B) var_q_dom_europe
             (2C) var_demand_not_covered
-            
             (2D) var_cost_market_clearing
             (2E) var_cost_edp
             (2F) var_cost_ccs
@@ -135,111 +134,116 @@ def write_results_to_ext_iamc_format(m, res_dir):
             )
         else:
             pass
-
+    
+    # (2D) average supply costs per importer
+    for i in m.set_importer:
+        if i in m.set_importer_europe:    
+            _demand_covered = m.par_demand[i] - m.var_demand_not_covered[i]() - m.var_q_dom_europe[i]()
+        else:
+            _demand_covered = m.par_demand[i] - m.var_demand_not_covered[i]()
+        
+        _value = np.around(m.var_cost_market_clearing[i]() / _demand_covered, 2)
+        
+        output_iamc = write_iamc(
+            output_iamc, _model, _scenario, i, "LNG|Cost|Average", "$/MMBtu", m.year, _value
+            )
+        output_iamc = write_iamc(
+            output_iamc, _model, _scenario, i, "LNG|Cost|Total", "$", m.year, m.var_cost_market_clearing[i]()
+            )
+        
+    # (2E) 
+    output_iamc = write_iamc(
+            output_iamc, _model, _scenario, 'Europe', "LNG|Cost|EDP", "$", m.year, m.var_cost_edp()
+            )
+    
+    # (2F)
+    output_iamc = write_iamc(
+            output_iamc, _model, _scenario, 'Europe', "LNG|Cost|CCS", "$", m.year, m.var_cost_ccs()
+            )
+    
+    # (2G)
+    for i in m.set_importer:
+        _v = m.var_demand_not_covered[i]()
+        if _v > 0:
+            output_iamc = write_iamc(
+                output_iamc, _model, _scenario, i, "LNG|Cost|Unsupplied", "$", m.year, _v * 10e10
+            )
+        else:
+            pass
+    
+    # (2H) objective function value
+    output_iamc = write_iamc(
+            output_iamc, _model, _scenario, 'World', "Objective value", "$", m.year, m.objective()
+    )
+        
     output_iamc.to_excel(
-            os.path.join(res_dir, "1_optimal solution.xlsx"), index=False
+            os.path.join(res_dir, "primal solution.xlsx"), index=False
+    )
+    return output_iamc
+
+
+def write_iamc_with_marginal_exporter(output_df, model, scenario, region, variable, unit, time, values, exporter):
+
+    if isinstance(values, list):
+        _df = pd.DataFrame(
+            {
+                "model": model,
+                "scenario": scenario,
+                "region": region,
+                "variable": variable,
+                "unit": unit,
+                "year": time,
+                "value": values,
+                "marginal exporter" : exporter
+            }
+        )
+    else:
+        _df = pd.DataFrame(
+            {
+                "model": model,
+                "scenario": scenario,
+                "region": region,
+                "variable": variable,
+                "unit": unit,
+                "year": time,
+                "value": values,
+                "marginal exporter" : exporter
+            },
+            index=[0],
         )
 
+    output_df = output_df.append(_df)
+    return output_df
 
 
+def write_dual_variables_to_output_files(m, res_dir):
+    _df = pd.DataFrame()
+    _scenario = m.scenario
+    _model = 'LNG model'
+    _time = m.year
+
+    for importer in m.set_importer:
+        _check = 0
+        _price = 0
+        _value = m.dual[m.con_demand_balance[importer]]  # dual variable of importer's balance constraint
+        for exporter in m.set_exporter:
+            _des = m.par_des[exporter, importer]
+            
+            if (_value <= _des*1.05) and (_value >= _des*0.95):
+                _marginal_exporter = exporter  # find marginal exporter per import country
+                _check = 1
+            else:
+                pass
+        if _check == 0:
+            _marginal_exporter = 'NOT AVAILABLE'
+        else:
+            pass
+
+        _df = write_iamc_with_marginal_exporter(
+            _df, _model, _scenario, importer, "LNG|Cost|Marginal", "$/MMBtu", m.year, _value, _marginal_exporter
+        )
+
+        _df.to_excel(
+            os.path.join(res_dir, "dual solution.xlsx"), index=False
+        )
     return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #
-    # DUAL VARIABLEN SPEICHERN
-
-
-
-
-
-
-
-
-
-
-
-    # # Spot markt revenues
-    # _value = np.around(py.value(m.revenues_spot), 0)
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Day-Ahead", _unit, _time, _value
-    # )
-    # # Base future revenues
-    # _value = np.around(py.value(m.revenues_future), 0)
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Future contract", _unit, _time, _value
-    # )
-    # # Hydrogen revenues
-    # _value = np.around(py.value(m.revenues_H2), 0)
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Hydrogen", _unit, _time, _value
-    # )
-    #
-    # output_iamc.to_excel(os.path.join(res_dir, "IAMC_annual.xlsx"), index=False)
-    #
-    # _unit = "MWh"
-    # _time = [_t for _t in m.set_time]
-    # output_iamc = pd.DataFrame()
-    #
-    # # Quantity future
-    # _value = []
-    # for _t in m.set_time:
-    #     _value.append(np.around(py.value(m.v_q_future[_t]), 0))
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Future contract", _unit, _time, _value
-    # )
-    # # Quantity day-ahead
-    # _value = []
-    # for _t in m.set_time:
-    #     _value.append(np.around(py.value(m.v_q_spot[_t]), 0))
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Day-Ahead", _unit, _time, _value
-    # )
-    # # Quantity hydrogen
-    # _value = []
-    # for _t in m.set_time:
-    #     _value.append(np.around(py.value(m.v_q_H2[_t]), 0))
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Hydrogen", _unit, _time, _value
-    # )
-    #
-    # output_iamc.to_excel(os.path.join(res_dir, "IAMC_hourly.xlsx"), index=False)
-    #
-    # _value = []
-    # for _t in m.set_time:
-    #     _value.append(np.around(py.value(m.v_q_fossil[_t]), 0))
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Conventional", _unit, _time, _value
-    # )
-    #
-    # output_iamc.to_excel(os.path.join(res_dir, "IAMC_supply.xlsx"), index=False)
-    #
-    # plot_IAMC.plot_results(res_dir)
-    #
-    # # Write shadow price and projecte shadow price to result file
-    # output_iamc = pd.DataFrame()
-    # _value = []
-    # for _t in m.set_time:
-    #     _value.append(np.around(-py.value(m.dual_lambda_load[_t]), 2))
-    # output_iamc = write_IAMC(
-    #     output_iamc, _model, _scenario, _region, "Shadow price", _unit, _time, _value
-    # )
-
