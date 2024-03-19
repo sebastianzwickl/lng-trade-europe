@@ -7,14 +7,14 @@ import pandas as pd
 
 
 _colors = {
-    'Algeria': "#FFEAD2",
-    'Qatar': "#DBDFEA",
-    'Nigeria': "#ACB1D6",
-    'Other Europe': "#FF90BC",
-    'Other Africa': '#EE7214',
-    'Trinidad & Tobago': '#F7B787',
-    'USA': '#527853',
-    'Other Americas': '#9BB8CD'
+    "Algeria": "#FFEAD2",
+    "Qatar": "#89B9AD",
+    "Nigeria": "#ACB1D6",
+    "Other Europe": "#FF90BC",
+    "Other Africa": "#EE7214",
+    "Trinidad & Tobago": "#F7B787",
+    "USA": "#748E63",
+    "Other Americas": "#9BB8CD",
     }
 
 
@@ -78,7 +78,7 @@ def run(model, folder):
         bar.set_linewidth(0.5)
 
     plt.xlim(0, _cumulated)
-    plt.ylim(0, 20)
+    plt.ylim(0, 15.5)
 
     formatter = ticker.ScalarFormatter(useMathText=True)
     formatter.set_scientific(True)
@@ -87,15 +87,20 @@ def run(model, folder):
     ax.xaxis.set_major_formatter(formatter)
 
     _patches = []
-    for _reg in _regions:
+    for _reg in sorted(_regions):
         _patches.append(mpatches.Patch(color=_colors.get(_reg, 'black'), label=_reg))
-
+        
+    if len(_patches) == 4:
+        _ncol = 4
+    else:
+        _ncol = 3
+    
     _legend = ax.legend(handles=_patches, loc='upper left', facecolor='white', fontsize=12,
-                        handlelength=1.5,
-                        handletextpad=0.5, ncol=1, borderpad=0.5, columnspacing=1, edgecolor="black", frameon=True,
-                        bbox_to_anchor=(0.015, 1-0.015),
+                        handlelength=1,
+                        handletextpad=0.5, ncol=_ncol, borderpad=0.5, columnspacing=1, edgecolor="black", frameon=True,
+                        bbox_to_anchor=(0.005, 1-0.005),
                         shadow=False,
-                        framealpha=1
+                        framealpha=0
                         )
 
     _legend.get_frame().set_linewidth(0.5)
@@ -103,7 +108,7 @@ def run(model, folder):
     ax.set_xlabel("Import volumes from regions [MMBtu]", fontsize=12)
     ax.set_ylabel("Supply cost [$/MMBtu]", fontsize=12)
 
-    plt.title("LNG supply in Europe 2040 and associated supply cost", fontsize=14)
+    #  plt.title("LNG supply in Europe 2040 and associated supply cost", fontsize=14)
     plt.tight_layout()
     fig.savefig(os.path.join(folder, "import volumes europe.pdf"), dpi=1000)
 
@@ -134,91 +139,45 @@ def run(model, folder):
         }
     )
 
-    _df.to_excel(os.path.join(folder, 'european values.xlsx'), index=False)
+    _df.to_excel(os.path.join(folder, '3_european costs.xlsx'), index=False)
+    
+    _df = pd.DataFrame(
+        {
+            "model": 'LNG model',
+            "scenario": model.scenario,
+            "region": _regions,
+            "variable": 'LNG|Export|Europe',
+            "unit": 'MMBtu',
+            "year": '2040',
+            "value": _quantities,
+        }
+    )
+
+    _df.to_excel(os.path.join(folder, '3_european supply.xlsx'), index=False)
+    
+    #  plot European marginal and average supply cost
+    
+    _labels = ['Average','Marginal']
+    _values = [_average, _marginal]
+    
+    _fig = plt.figure(figsize=(6,3))
+    _hbars = plt.barh(_labels, _values, color=['#BCA37F', '#113946'], zorder=2, alpha=1)
+    plt.grid(which="major", axis="both", color="#758D99", alpha=0.2, zorder=1)
+    plt.grid(which="minor", axis="both", color="#758D99", alpha=0.2, zorder=1)
+    
+    plt.xlim([0, 15.5])
+    
+    for bar in _hbars:
+        bar.set_edgecolor("black")
+        bar.set_linewidth(0.5)
+    
+    for bar, cost in zip(_hbars, _values):
+        plt.text(bar.get_width() - 0.25, bar.get_y() + bar.get_height()/2, f'{cost:.1f}', 
+             va='center', ha='right', color='white', fontsize=12)
+    
+    plt.xlabel("Supply cost in Europe 2040 [$/MMBtu]", fontsize=12)
+
+    plt.tight_layout()
+    _fig.savefig(os.path.join(folder, "supply costs europe.pdf"), dpi=1000)
 
     return
-
-
-def plot_results(res_dir):
-
-    # Plot Day-Ahead, Future (Base) and CO2 Price
-
-    fig, ax = plt.subplots()
-    df = py.IamDataFrame("IAMC_inputs.xlsx")
-    df.plot(
-        color="variable",
-        title="Electricity prices in EUR/MWh, $CO_2$ price in EUR/t",
-        marker="d",
-        markersize=5,
-        ax=ax,
-    )
-    plt.xlabel("Time in h")
-    plt.ylabel("")
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
-    legend = plt.legend(fontsize=12)
-    legend.get_texts()[0].set_text("$CO_2$")
-    legend.get_texts()[1].set_text("Day-Ahead (EPEX)")
-    legend.get_texts()[2].set_text("Future contract (EEX)")
-
-    plt.tight_layout()
-    fig.savefig(os.path.join(res_dir, "Prices.png"), dpi=500)
-
-    # Plot Results
-    fig, ax = plt.subplots()
-    df = py.IamDataFrame(os.path.join(res_dir, "IAMC_hourly.xlsx"))
-    df.plot(
-        color="variable",
-        title="Hydropower plant resource allocation in MWh",
-        marker="d",
-        markersize=5,
-        ax=ax,
-        cmap="Dark2",
-    )
-    plt.xlabel("Time in h")
-    plt.ylabel("")
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.legend(fontsize=12)
-    plt.title("Hydropower plant resource allocation in MWh", fontsize=14)
-    plt.tight_layout()
-    fig.savefig(os.path.join(res_dir, "Ressource allocation.png"), dpi=500)
-
-    # Plot supply/generation
-    fig = plt.figure(constrained_layout=False)
-    plt.style.use("ggplot")
-    gs = fig.add_gridspec(2, 1)
-    fig_leader = fig.add_subplot(gs[0, :])
-    fig_follower = fig.add_subplot(gs[1, :])
-
-    df = py.IamDataFrame(os.path.join(res_dir, "IAMC_supply.xlsx"))
-    data_leader = df.filter(variable=["Future contract", "Day-Ahead"])
-    data_leader.plot.stack(
-        stack="variable",
-        title="Hydropower electricty production",
-        total=True,
-        ax=fig_leader,
-        cmap="Set3",
-    )
-    fig_leader.set_xlabel("Time in h")
-    lines = fig_leader.get_lines()
-    lines[0].set_linewidth(2)
-    fig_leader.set_title("Hydropower electricty production", fontsize=12)
-
-    data_leader = df.filter(variable=["Conventional"])
-    data_leader.plot.stack(
-        stack="variable",
-        title="Energy demand provision\n(transportation firm)",
-        total=True,
-        ax=fig_follower,
-        cmap="PiYG",
-    )
-    fig_follower.set_xlabel("Time in h")
-    lines = fig_follower.get_lines()
-    lines[0].set_linewidth(2)
-    fig_follower.set_title(
-        "Energy demand provision\n(transportation firm)", fontsize=12
-    )
-
-    plt.tight_layout()
-    fig.savefig(os.path.join(res_dir, "Energy service provision.png"), dpi=500)

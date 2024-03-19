@@ -5,7 +5,6 @@ import os
 
 
 def write_iamc(output_df, model, scenario, region, variable, unit, time, values):
-
     if isinstance(values, list):
         _df = pd.DataFrame(
             {
@@ -56,7 +55,8 @@ def write_results_to_ext_iamc_format(m, res_dir):
     for e in m.set_exporter:
         for i in m.set_importer:
             input_iamc = write_iamc(
-                input_iamc, _model, _scenario, e+'>'+i, "Delivered ex-ship price", "$/MMBtu", m.year, m.par_des[e,i]
+                input_iamc, _model, _scenario, e + '>' + i, "Delivered ex-ship price", "$/MMBtu", m.year,
+                m.par_des[e, i]
             )
 
     # (1B)
@@ -87,11 +87,11 @@ def write_results_to_ext_iamc_format(m, res_dir):
     )
 
     input_iamc.to_excel(
-            os.path.join(res_dir, "inputs.xlsx"), index=False
-        )
+        os.path.join(res_dir, "0_input.xlsx"), index=False
+    )
 
     """
-        (2) SAVE RESULTS '1_optimal solution.xlsx'
+        (2) SAVE RESULTS '1_primal solution.xlsx'
             (2A) var_q
             (2B) var_q_dom_europe
             (2C) var_demand_not_covered
@@ -100,6 +100,10 @@ def write_results_to_ext_iamc_format(m, res_dir):
             (2F) var_cost_ccs
             (2G) var_cost_not_supply
             (2H) objective
+            -------------------------------------
+            (2G) utilization rate (i.e., 2A / 1B)
+                2A ... sum m.var_q[e,i] for all i
+                1B ... m.par_gasification[e]
     """
 
     output_iamc = pd.DataFrame()
@@ -110,7 +114,7 @@ def write_results_to_ext_iamc_format(m, res_dir):
             _value = m.var_q[e, i]()
             if _value > 0:
                 output_iamc = write_iamc(
-                    output_iamc, _model, _scenario, e+'>'+i, "LNG|Trade", "MMBtu", m.year, _value
+                    output_iamc, _model, _scenario, e + '>' + i, "LNG|Trade", "MMBtu", m.year, _value
                 )
             else:
                 pass
@@ -120,8 +124,8 @@ def write_results_to_ext_iamc_format(m, res_dir):
         _value = m.var_q_dom_europe[c]()
         if _value > 0:
             output_iamc = write_iamc(
-                    output_iamc, _model, _scenario, c, "EDP|NG", "MMBtu", m.year, _value
-                )
+                output_iamc, _model, _scenario, c, "EDP|NG", "MMBtu", m.year, _value
+            )
         else:
             pass
 
@@ -134,33 +138,33 @@ def write_results_to_ext_iamc_format(m, res_dir):
             )
         else:
             pass
-    
+
     # (2D) average supply costs per importer
     for i in m.set_importer:
-        if i in m.set_importer_europe:    
+        if i in m.set_importer_europe:
             _demand_covered = m.par_demand[i] - m.var_demand_not_covered[i]() - m.var_q_dom_europe[i]()
         else:
             _demand_covered = m.par_demand[i] - m.var_demand_not_covered[i]()
-        
+
         _value = np.around(m.var_cost_market_clearing[i]() / _demand_covered, 2)
-        
+
         output_iamc = write_iamc(
             output_iamc, _model, _scenario, i, "LNG|Cost|Average", "$/MMBtu", m.year, _value
-            )
+        )
         output_iamc = write_iamc(
             output_iamc, _model, _scenario, i, "LNG|Cost|Total", "$", m.year, m.var_cost_market_clearing[i]()
-            )
-        
+        )
+
     # (2E) 
     output_iamc = write_iamc(
-            output_iamc, _model, _scenario, 'Europe', "LNG|Cost|EDP", "$", m.year, m.var_cost_edp()
-            )
-    
+        output_iamc, _model, _scenario, 'Europe', "LNG|Cost|EDP", "$", m.year, m.var_cost_edp()
+    )
+
     # (2F)
     output_iamc = write_iamc(
-            output_iamc, _model, _scenario, 'Europe', "LNG|Cost|CCS", "$", m.year, m.var_cost_ccs()
-            )
-    
+        output_iamc, _model, _scenario, 'Europe', "LNG|Cost|CCS", "$", m.year, m.var_cost_ccs()
+    )
+
     # (2G)
     for i in m.set_importer:
         _v = m.var_demand_not_covered[i]()
@@ -170,20 +174,32 @@ def write_results_to_ext_iamc_format(m, res_dir):
             )
         else:
             pass
-    
+
     # (2H) objective function value
     output_iamc = write_iamc(
-            output_iamc, _model, _scenario, 'World', "Objective value", "$", m.year, m.objective()
+        output_iamc, _model, _scenario, 'World', "Objective value", "$", m.year, m.objective()
     )
-        
+
+    # (2G) utilization rate (i.e., use of gasification capacity per exporter)
+    for e in m.set_exporter:
+        _total_export = sum(m.var_q[e, _importer]() for _importer in m.set_importer)
+        _utilization = (_total_export / m.par_gasification[e]) * 100
+        output_iamc = write_iamc(
+            output_iamc, _model, _scenario, e, "LNG|Gasification|Utilization", "%", m.year, np.around(_utilization, 1)
+        )
+
+    #
+    #
+    #
+    # ------------------------------------------------------------------------------------------------------------------
+
     output_iamc.to_excel(
-            os.path.join(res_dir, "primal solution.xlsx"), index=False
+        os.path.join(res_dir, "1_primal solution.xlsx"), index=False
     )
     return output_iamc
 
 
 def write_iamc_with_marginal_exporter(output_df, model, scenario, region, variable, unit, time, values, exporter):
-
     if isinstance(values, list):
         _df = pd.DataFrame(
             {
@@ -194,7 +210,7 @@ def write_iamc_with_marginal_exporter(output_df, model, scenario, region, variab
                 "unit": unit,
                 "year": time,
                 "value": values,
-                "marginal exporter" : exporter
+                "marginal exporter": exporter
             }
         )
     else:
@@ -207,7 +223,7 @@ def write_iamc_with_marginal_exporter(output_df, model, scenario, region, variab
                 "unit": unit,
                 "year": time,
                 "value": values,
-                "marginal exporter" : exporter
+                "marginal exporter": exporter
             },
             index=[0],
         )
@@ -228,8 +244,8 @@ def write_dual_variables_to_output_files(m, res_dir):
         _value = m.dual[m.con_demand_balance[importer]]  # dual variable of importer's balance constraint
         for exporter in m.set_exporter:
             _des = m.par_des[exporter, importer]
-            
-            if (_value <= _des*1.05) and (_value >= _des*0.95):
+
+            if (_value <= _des * 1.05) and (_value >= _des * 0.95):
                 _marginal_exporter = exporter  # find marginal exporter per import country
                 _check = 1
             else:
@@ -244,6 +260,6 @@ def write_dual_variables_to_output_files(m, res_dir):
         )
 
         _df.to_excel(
-            os.path.join(res_dir, "dual solution.xlsx"), index=False
+            os.path.join(res_dir, "2_dual solution.xlsx"), index=False
         )
     return
