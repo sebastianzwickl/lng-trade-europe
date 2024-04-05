@@ -10,7 +10,7 @@ This repository includes materials and methods of the paper submitted to _Energy
 <br>
     
 <p align="center" width="100%">
-	<img src="./_static//image1.jpg" width=100% height=100% align="center" alt="Sketch" />
+	<img src="./_static//image1.png" width=100% height=100% align="center" alt="Sketch" />
 </p>
 <be>
 
