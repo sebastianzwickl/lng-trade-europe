@@ -146,8 +146,12 @@ def write_results_to_ext_iamc_format(m, res_dir):
             _demand_covered = m.par_demand[i] - m.var_demand_not_covered[i]() - m.var_q_dom_europe[i]()
         else:
             _demand_covered = m.par_demand[i] - m.var_demand_not_covered[i]()
-
-        _value = np.around(m.var_cost_market_clearing[i]() / _demand_covered, 2)
+            
+        if _demand_covered > 0:
+            _value = np.around(m.var_cost_market_clearing[i]() / _demand_covered, 2)
+        else:
+            _value = 0
+            
 
         output_iamc = write_iamc(
             output_iamc, _model, _scenario, i, "LNG|Cost|Average", "$/MMBtu", m.year, _value
