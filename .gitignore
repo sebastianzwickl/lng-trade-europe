@@ -146,4 +146,5 @@ dmypy.json
 materials/*
 model/outdated/*
 references/*
+workflow/*
 
