@@ -144,7 +144,7 @@ dmypy.json
 
 # exclude reference folder
 
-model/outdated/*
 references/*
 workflow/*
+master thesis/*
 
