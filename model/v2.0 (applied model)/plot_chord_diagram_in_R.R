@@ -1,0 +1,156 @@
+library(circlize)
+library(readxl)
+
+# Set working directory to script location
+script_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+setwd(script_dir)
+
+# Country Abbreviations
+country_abbreviations <- list(
+  "Qatar" = "QA", "Australia" = "AU", "USA" = "US", "Russia" = "RU", "Malaysia" = "MY",
+  "Nigeria" = "NG", "Trinidad & Tobago" = "TT", "Algeria" = "DZ", "Indonesia" = "ID",
+  "Oman" = "OM", "Other Asia Pacific" = "OAP", "Other Europe" = "OE", "Other Americas" = "OA",
+  "Other ME" = "OME", "Other Africa" = "OAF", "Japan" = "JP", "China" = "CN",
+  "South Korea" = "KR", "India" = "IN", "Taiwan" = "TW", "Pakistan" = "PK",
+  "France" = "FR", "Spain" = "ES", "UK" = "GB", "Italy" = "IT", "Turkey" = "TR",
+  "Belgium" = "BE", "Total North America" = "TNA", "Total S. & C. America" = "SCA",
+  "Total ME & Africa" = "TMEA"
+)
+
+# Group European Importers into "Europe"
+european_countries <- c("FR", "ES", "GB", "IT", "TR", "BE")
+country_abbreviations <- lapply(country_abbreviations, function(x) if (x %in% european_countries) "EU+" else x)
+
+# Define a pastel color scheme for better differentiation
+# Define a color scheme where larger flows are more emphasized
+region_colors <- c(
+  "QA"  = "#E9762B",  # Bright red-orange (strong impact)
+  "AU"  = "#4D55CC",  # Vivid blue
+  "US"  = "#015551",  # Strong green
+  "RU"  = "#C7DB9C",  # Muted red-pink
+  "MY"  = "#F7DC6F",  # Strong yellow
+  
+  "NG"  = "#A569BD",  # Purple tone
+  "TT"  = "#85C1E9",  # Pastel blue
+  "DZ"  = "#F5B7B1",  # Soft pink-red
+  "ID"  = "#D7BDE2",  # Soft lavender
+  "OM"  = "#5DADE2",  # Medium blue
+  
+  "OAP" = "#F0B27A",  # Light orange
+  "OE"  = "#58D68D",  # Soft green
+  "OA"  = "#AF7AC5",  # Muted purple
+  "OME" = "#E59866",  # Pastel orange-brown
+  "OAF" = "#DC7633",  # Darker orange
+  
+  "JP"  = "#F4D03F",  # Bright yellow (big importer)
+  "CN"  = "#DC7633",  # Deep orange (big importer)
+  "KR"  = "#9B59B6",  # Strong purple
+  "IN"  = "#1ABC9C",  # Teal (emerging market)
+  "TW"  = "#2980B9",  # Deep blue
+  "PK"  = "#A3E4D7",  # Soft teal-green
+  
+  "EU+"  = "#34495E",  # Dark blue-gray (grouped European imports)
+  "TNA" = "#F1C40F",  # Strong yellow
+  "SCA"= "#D68910",  # Brown-orange
+  "TMEA"= "#16A085"   # Deep teal
+)
+
+
+dict = "result/20250311_12/"
+
+years <- c(2030, 2040)
+
+for (year in years) {
+  
+  name <- paste0("flowsx", year, ".xlsx")  # Concatenate 'flowsx' + year + '.xlsx'
+  
+  # Load the Data
+  file_path <- paste0(dict, name)
+  data <- read_excel(file_path)
+  
+  # Extract Row Names and Convert to Matrix
+  row_names <- data[[1]]  # First column as row names
+  data_matrix <- as.matrix(data[,-1])  # Convert remaining data to matrix
+  
+  rownames(data_matrix) <- sapply(row_names, function(x) country_abbreviations[[x]])
+  colnames(data_matrix) <- sapply(colnames(data_matrix), function(x) country_abbreviations[[x]])
+  
+  flow_matrix <- as.matrix(data_matrix)
+  
+  # Create Chord Diagram
+  output1 <- paste0("chord_diagram_", year, ".pdf")
+  
+  output_file <- paste0(dict, output1)
+  pdf(output_file, width = 10, height = 10)
+  
+  chordDiagram(
+    flow_matrix,
+    grid.col = region_colors,  # Apply predefined colors
+    transparency = 0.4,        # Adjust transparency for better visibility
+    annotationTrack = c("grid"),  # Show only grid annotations, not links
+    preAllocateTracks = list(track.height = 0.05)  # Adjust track spacing
+  )
+  
+  font_size <- 1.2  # Adjust as needed
+  label_offset <- 0.2  # Increase to move labels further outward
+  
+  # Rotate text labels by 90 degrees and move them outward
+  circos.track(track.index = 1, panel.fun = function(x, y) {
+    sector.name <- get.cell.meta.data("sector.index")  # Get sector name
+    sector.xlim <- get.cell.meta.data("xlim")  # Get x-axis limits for sector
+    sector.ylim <- get.cell.meta.data("ylim")  # Get y-axis limits for sector
+    
+    # Ensure x is numeric before using mean()
+    if (!is.numeric(sector.xlim) || !is.numeric(sector.ylim)) {
+      warning("Sector limits are not numeric: skipping label placement.")
+      return()  # Skip this iteration to avoid errors
+    }
+    
+    # Adjust the y position to move labels outward
+    circos.text(
+      x = mean(sector.xlim), 
+      y = max(sector.ylim) + label_offset,  # Move labels outward
+      labels = sector.name,
+      facing = "clockwise",  # Rotate text along the circle
+      niceFacing = TRUE,      # Adjust rotation automatically
+      adj = c(0, 0.5),        # Adjust text positioning
+      cex = font_size  # Set font size
+    )
+  })
+  
+  # Compute total flow per exporter (sum of all outgoing flows)
+  total_exports <- rowSums(flow_matrix)
+  # Compute total flow per importer (sum of all incoming flows)
+  total_imports <- colSums(flow_matrix)
+  
+  # Add total flow numbers as labels
+  circos.track(track.index = 1, panel.fun = function(x, y) {
+    sector.name <- get.cell.meta.data("sector.index")  # Get sector name
+    sector.xlim <- get.cell.meta.data("xlim")  # X-axis limits for the sector
+    sector.ylim <- get.cell.meta.data("ylim")  # Y-axis limits for the sector
+    
+    # Ensure x is numeric before using mean()
+    if (!is.numeric(sector.xlim) || !is.numeric(sector.ylim)) {
+      warning("Sector limits are not numeric: skipping label placement.")
+      return()
+    }
+    
+    # Retrieve total flow values
+    total_flow <- ifelse(sector.name %in% names(total_exports), total_exports[sector.name], 
+                         ifelse(sector.name %in% names(total_imports), total_imports[sector.name], NA))
+    
+    # Add the text label if there's a flow value
+    if (total_flow > 1) {
+      circos.text(
+        x = mean(sector.xlim), 
+        y = max(sector.ylim) - 0.5,  # Move text slightly outward
+        labels = paste0(round(total_flow, 0)),  # Format: 'Node Name\nTotal Flow'
+        facing = "outside", 
+        adj = c(0.5, 0.5), 
+        cex = 1.2  # Adjust font size
+      )
+    }
+  })
+  
+  dev.off()  # Close the PDF file
+}
