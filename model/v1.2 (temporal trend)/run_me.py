@@ -8,6 +8,7 @@ import save_results_to_iamc_files as report
 import plot_results_with_pyam as plot
 import temporal_trend_plot as ttp
 import average_increase as ai
+import numpy as np
 
 # TODO: Add here something.
 
@@ -29,6 +30,7 @@ _temporal_marginal_nm = []
 # (0) ... Run either (i) Net Zero or (ii) New Momentum scenario
 
 for _SCENARIO in ["Net Zero", 'New Momentum']:
+    print(_SCENARIO)
 
     for TARGET_YEAR in list(range(2030, 2041, 1)):
         
@@ -492,7 +494,11 @@ for _SCENARIO in ["Net Zero", 'New Momentum']:
             else:
                 _temporal_average_nm.append(_v_av)
                 _temporal_marginal_nm.append(_v_mg)
-
+            
+            value = np.around(model.dual[model.con_demand_balance['Japan']], 2)
+            print(f"{TARGET_YEAR}: {value} $/MMBtu")
+            
+            
 _data=[[_temporal_average_nz, _temporal_average_nm], [_temporal_marginal_nz, _temporal_marginal_nm]]
 
 for _d in [_temporal_average_nz, _temporal_average_nm, _temporal_marginal_nz, _temporal_marginal_nm]:
